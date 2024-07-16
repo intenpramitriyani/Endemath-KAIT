@@ -24,8 +24,9 @@ public class EnemyStateMachine : MonoBehaviour
 
     private Vector3 startposition; // Starting position of the enemy
     private bool actionStarted = false;
-    private GameObject PlayerToAttack;
+    public GameObject PlayerToAttack;
     private float animSpeed = 5f;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -79,6 +80,7 @@ public class EnemyStateMachine : MonoBehaviour
     {
         HandleTurn myAttack = new HandleTurn(); // Create a new HandleTurn instance for the enemy's attack
         myAttack.Attacker = enemy.name; // Assign the attacker's name (enemy's name)
+        myAttack.Type = "Enemy";
         myAttack.AttackersGameObject = this.gameObject; // Assign the attacker's GameObject (this enemy)
 
         // Directly assign the player's GameObject as the target if it exists
@@ -110,15 +112,23 @@ public class EnemyStateMachine : MonoBehaviour
         }
 
         //wait a bit
+        yield return new WaitForSeconds(0.5f);
         //do damage
 
         //animate back to startposition
+        Vector3 firstPosition = startposition;
+        while (MoveTowardsStart (firstPosition))
+        {
+            yield return null;
+        }
 
         //remove this performer from the list in BSM
-
+        BSM.PerformList.RemoveAt(0);
         //reset BSM (wait)
-
+        BSM.battleStates = BattleStateMachine.PerformAction.WAIT;
+        //end coroutine
         actionStarted = false;
+        //reset this enemy state
         cur_cooldown = 0f;
         currentState = TurnState.PROCESSING;
     }
@@ -126,5 +136,9 @@ public class EnemyStateMachine : MonoBehaviour
     private bool MoveTowardsEnemy (Vector3 target)
     {
         return target != (transform.position = Vector3.MoveTowards (transform.position, target, animSpeed * Time.deltaTime));
+    }
+    private bool MoveTowardsStart(Vector3 target)
+    {
+        return target != (transform.position = Vector3.MoveTowards(transform.position, target, animSpeed * Time.deltaTime));
     }
 }

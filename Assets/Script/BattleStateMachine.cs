@@ -19,6 +19,17 @@ public class BattleStateMachine : MonoBehaviour
     public GameObject player; // Single player GameObject
     public GameObject enemy; // Single enemy GameObject
 
+    public enum PlayerGUI 
+    {
+        ACTIVATE,
+        WAITING,
+        INPUT1,
+        INPUT2,
+        DONE
+        }
+
+    public PlayerGUI PlayerInput;
+    public List<GameObject> PlayersToManage = new List<GameObject>();
     // Start is called before the first frame update
     void Start()
     {
@@ -62,6 +73,21 @@ public class BattleStateMachine : MonoBehaviour
 
             case PerformAction.TAKEACTION:
                 // Logic for taking action
+                GameObject performer = GameObject.Find(PerformList[0].Attacker);
+                if (PerformList[0].Type == "Enemy")
+                {
+                    EnemyStateMachine ESM = performer.GetComponent<EnemyStateMachine>();
+                    ESM.PlayerToAttack = PerformList[0].AttackersTarget;
+                    ESM.currentState = EnemyStateMachine.TurnState.ACTION;
+                }
+
+                if (PerformList[0].Type == "Player")
+                {
+
+                }
+
+                battleStates = PerformAction.PERFORMACTION;
+
                 break;
 
             case PerformAction.PERFORMACTION:
