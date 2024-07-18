@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class PlayerStateMachine : MonoBehaviour
 {
+    private BattleStateMachine BSM;
     public BasePlayer player;
 
     public enum TurnState
@@ -22,10 +23,14 @@ public class PlayerStateMachine : MonoBehaviour
     private float cur_cooldown = 0f;
     private float max_cooldown = 5f;
     public Image ProgressBar;
+    public GameObject Selector;
 
     // Start is called before the first frame update
     void Start()
     {
+        cur_cooldown = Random.Range(0, 2.5f);
+        Selector.SetActive(false);
+        BSM = GameObject.Find("BattleManager").GetComponent<BattleStateMachine>();
         currentState = TurnState.PROCESSING;
         // Pastikan progress bar diinisialisasi dengan skala yang benar
         ProgressBar.transform.localScale = new Vector3(0, ProgressBar.transform.localScale.y, ProgressBar.transform.localScale.z);
@@ -37,18 +42,20 @@ public class PlayerStateMachine : MonoBehaviour
         //Debug.Log(currentState);
         switch (currentState)
         {
-            case (TurnState.PROCESSING):
+            case TurnState.PROCESSING:
                 upgradeProgressBar();
                 break;
-            case (TurnState.ADDTOLIST):
+            case TurnState.ADDTOLIST:
+                BSM.PlayerToManage.Add(this.gameObject);
+                currentState = TurnState.WAITING; // Transition to the next state
                 break;
-            case (TurnState.SELECTING):
+
+            case TurnState.WAITING:
+
                 break;
-            case (TurnState.WAITING):
+            case TurnState.ACTION:
                 break;
-            case (TurnState.ACTION):
-                break;
-            case (TurnState.DEAD):
+            case TurnState.DEAD:
                 break;
         }
     }
