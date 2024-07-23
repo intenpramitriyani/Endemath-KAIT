@@ -22,12 +22,12 @@ public class EnemyStateMachine : MonoBehaviour
     private float cur_cooldown = 0f; // Current cooldown time for actions
     private float max_cooldown = 5f; // Maximum cooldown time before taking action
 
-    private Vector3 startposition; // Starting position of the enemy
+    //timeforaction things
+    private Vector3 startposition;
     private bool actionStarted = false;
     public GameObject PlayerToAttack;
     private float animSpeed = 5f;
 
-    // Start is called before the first frame update
     void Start()
     {
         currentState = TurnState.PROCESSING; // Initialize state to PROCESSING
@@ -40,7 +40,6 @@ public class EnemyStateMachine : MonoBehaviour
         startposition = transform.position; // Record starting position of the enemy
     }
 
-    // Update is called once per frame
     void Update()
     {
         switch (currentState)
@@ -78,25 +77,26 @@ public class EnemyStateMachine : MonoBehaviour
 
     void ChooseAction()
     {
-        HandleTurn myAttack = new HandleTurn(); // Create a new HandleTurn instance for the enemy's attack
-        myAttack.Attacker = enemy.name; // Assign the attacker's name (enemy's name)
-        myAttack.Type = "Enemy";
-        myAttack.AttackersGameObject = this.gameObject; // Assign the attacker's GameObject (this enemy)
-
-        // Directly assign the player's GameObject as the target if it exists
-        if (BSM.player != null)
+        if (BSM.PlayerInBattle.Count > 0) // Check if PlayerInBattle is not empty
         {
-            myAttack.AttackersTarget = BSM.player; // Assign the player as the target
-            BSM.CollectActions(myAttack); // Collect the action into BattleStateMachine's PerformList
+            Debug.Log("Choosing action for enemy: " + enemy.name);
+            HandleTurn myAttack = new HandleTurn(); // Create a new HandleTurn instance for the enemy's attack
+            myAttack.Attacker = enemy.name; // Assign the attacker's name (enemy's name)
+            myAttack.Type = "Enemy";
+            myAttack.AttackersGameObject = this.gameObject; // Assign the attacker's GameObject (this enemy)
+            myAttack.AttackersTarget = BSM.PlayerInBattle[Random.Range(0, BSM.PlayerInBattle.Count)];
+            Debug.Log("Target chosen: " + myAttack.AttackersTarget.name);
+            BSM.CollectActions(myAttack);
         }
         else
         {
-            Debug.LogError("Player reference in BSM is null. Cannot choose action."); // Log an error if player reference is null
+            Debug.LogError("No players available to target in PlayerInBattle.");
         }
     }
 
-    private IEnumerator TimeForAction ()
+    private IEnumerator TimeForAction()
     {
+        Debug.Log("TimeForAction started");
         if (actionStarted)
         {
             yield break;
@@ -105,19 +105,20 @@ public class EnemyStateMachine : MonoBehaviour
         actionStarted = true;
 
         //animate the enemy near the hero to attack
-        Vector3 PlayerPosition = new Vector3 (PlayerToAttack.transform.position.x+1.5f, PlayerToAttack.transform.position.y, PlayerToAttack.transform.position.z);
-        while (MoveTowardsEnemy (PlayerPosition))
+        Vector3 PlayerPosition = new Vector3(PlayerToAttack.transform.position.x + 1.5f, PlayerToAttack.transform.position.y, PlayerToAttack.transform.position.z);
+        while (MoveTowardsEnemy(PlayerPosition))
         {
-            yield return null; 
+            yield return null;
         }
 
         //wait a bit
         yield return new WaitForSeconds(0.5f);
+
         //do damage
 
         //animate back to startposition
         Vector3 firstPosition = startposition;
-        while (MoveTowardsStart (firstPosition))
+        while (MoveTowardsStart(firstPosition))
         {
             yield return null;
         }
@@ -133,10 +134,11 @@ public class EnemyStateMachine : MonoBehaviour
         currentState = TurnState.PROCESSING;
     }
 
-    private bool MoveTowardsEnemy (Vector3 target)
+    private bool MoveTowardsEnemy(Vector3 target)
     {
-        return target != (transform.position = Vector3.MoveTowards (transform.position, target, animSpeed * Time.deltaTime));
+        return target != (transform.position = Vector3.MoveTowards(transform.position, target, animSpeed * Time.deltaTime));
     }
+
     private bool MoveTowardsStart(Vector3 target)
     {
         return target != (transform.position = Vector3.MoveTowards(transform.position, target, animSpeed * Time.deltaTime));

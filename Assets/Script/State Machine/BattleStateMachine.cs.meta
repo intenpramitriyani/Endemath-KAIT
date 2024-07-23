@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 0acd7d80cc6c95c49b5084b31a5fcf20
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - player: {instanceID: 0}
+  - enemy: {instanceID: 0}
+  - enemyButton: {fileID: 8595080129511932009, guid: 28b8085b6f73bed4aa416ade98aac840, type: 3}
+  - Spacer: {instanceID: 0}
+  - AttackPanel: {instanceID: 0}
+  - EnemySelectPanel: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

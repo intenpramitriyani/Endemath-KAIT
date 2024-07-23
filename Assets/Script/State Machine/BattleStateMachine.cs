@@ -31,20 +31,24 @@ public class BattleStateMachine : MonoBehaviour
 
     public PlayerGUI PlayerInput;
 
+    public GameObject enemyButtonPrefab;
+    public Transform enemyButtonParent;
+
+
     // Define the list of players to manage here
     public List<GameObject> PlayerToManage = new List<GameObject>();
     public List<GameObject> PlayerInBattle = new List<GameObject>();
-    public List<GameObject> EnemyInBattle;
-    
+    public List<GameObject> EnemyInBattle = new List<GameObject>();
+
     private HandleTurn PlayerChoice;
 
-    public GameObject enemyButton; 
+    public GameObject enemyButton;
     public Transform Spacer;
 
     public GameObject AttackPanel;
     public GameObject EnemySelectPanel;
     private GameObject selectedEnemy; // Add a field to store the selected enemy
-    
+
     // Start is called before the first frame update
     void Start()
     {
@@ -57,13 +61,14 @@ public class BattleStateMachine : MonoBehaviour
         {
             Debug.LogError("Player not found. Make sure there is a GameObject with the tag 'Player' in the scene.");
         }
+
         else
         {
             Debug.Log("Player found: " + player.name);
         }
 
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
-        if (enemy == null)
+        if (enemies.Length == 0)
         {
             Debug.LogError("Enemy not found. Make sure there is a GameObject with the tag 'Enemy' in the scene.");
         }
@@ -75,13 +80,12 @@ public class BattleStateMachine : MonoBehaviour
                 EnemyInBattle.Add(enemy);
             }
         }
-        
+
         PlayerInput = PlayerGUI.ACTIVATE;
 
         AttackPanel.SetActive(false);
         EnemySelectPanel.SetActive(false);
         EnemyButtons();
-
     }
 
     // Update is called once per frame
@@ -101,22 +105,42 @@ public class BattleStateMachine : MonoBehaviour
             case PerformAction.TAKEACTION:
                 // Logic for taking action
                 GameObject performer = GameObject.Find(PerformList[0].Attacker);
+
                 if (PerformList[0].Type == "Enemy")
                 {
                     EnemyStateMachine ESM = performer.GetComponent<EnemyStateMachine>();
-                    ESM.PlayerToAttack = PerformList[0].AttackersTarget;
-                    ESM.currentState = EnemyStateMachine.TurnState.ACTION;
+                        if (ESM != null)
+                        {
+                        ESM.PlayerToAttack = PerformList[0].AttackersTarget;
+                        ESM.currentState = EnemyStateMachine.TurnState.ACTION;
+                        }
+                        else
+                        {
+                        Debug.LogError("EnemyStateMachine component is missing on performer");
+                        }
                 }
 
                 if (PerformList[0].Type == "Player")
                 {
-                    // Add player action logic here
-
-                    Debug.Log("Hero is here to perform");
+                    PlayerStateMachine PSM = performer.GetComponent<PlayerStateMachine>();
+                    if (PSM != null)
+                    {
+                        PSM.EnemyToAttack = PerformList[0].AttackersTarget;
+                        PSM.currentState = PlayerStateMachine.TurnState.ACTION;
+                        Debug.Log("Hero is here to perform");
+                    }
+                    else
+                    {
+                        Debug.LogError("PlayerStateMachine component is missing on performer");
+                    }
+                }
+                
+                else
+                {
+                    Debug.LogError("Performer is null");
                 }
 
                 battleStates = PerformAction.PERFORMACTION;
-
                 break;
 
             case PerformAction.PERFORMACTION:
@@ -135,7 +159,6 @@ public class BattleStateMachine : MonoBehaviour
                     AttackPanel.SetActive(true);
                     PlayerInput = PlayerGUI.WAITING;
                 }
-
                 break;
 
             case (PlayerGUI.WAITING):
@@ -148,7 +171,7 @@ public class BattleStateMachine : MonoBehaviour
                 break;
 
             case (PlayerGUI.DONE):
-                PlayerInputDone ();
+                PlayerInputDone();
                 break;
         }
     }
@@ -169,34 +192,34 @@ public class BattleStateMachine : MonoBehaviour
 
     void EnemyButtons()
     {
+        // Bersihkan tombol musuh sebelumnya
+        foreach (Transform child in enemyButtonParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Buat tombol musuh baru
         foreach (GameObject enemy in EnemyInBattle)
         {
-            GameObject newButton = Instantiate(enemyButton) as GameObject;
+            GameObject newButton = Instantiate(enemyButtonPrefab) as GameObject;
+            newButton.transform.SetParent(enemyButtonParent, false);
+
             EnemySelectButton button = newButton.GetComponent<EnemySelectButton>();
-            button.EnemyPrefab = enemy; // Assign the enemy to the button
+            button.EnemyPrefab = enemy;
 
-            EnemyStateMachine cur_enemy = enemy.GetComponent<EnemyStateMachine>();
-
-            Text buttonText = newButton.transform.Find("Text").gameObject.GetComponent<Text>();
-            if (buttonText!= null)
+            Text buttonText = newButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
             {
-                buttonText.text = cur_enemy.enemy.name;
-                Debug.Log("Button text set to: " + cur_enemy.enemy.name);
+                buttonText.text = enemy.name;
             }
-
             else
             {
                 Debug.LogError("Text component not found on button.");
             }
-            
-
-            button.EnemyPrefab = enemy;
-            newButton.transform.SetParent(Spacer, false);
-
         }
     }
 
-    public void Input1 () //attack button
+    public void Input1() // Attack button
     {
         PlayerChoice.Attacker = PlayerToManage[0].name;
         PlayerChoice.AttackersGameObject = PlayerToManage[0];
@@ -207,22 +230,19 @@ public class BattleStateMachine : MonoBehaviour
     }
 
     // Method to handle enemy selection
-
     public void SetSelectedEnemy(GameObject enemy)
-        {
-            selectedEnemy = enemy;
-            Debug.Log("Selected enemy: " + enemy.name);
-        }
+    {
+        selectedEnemy = enemy;
+        Debug.Log("Selected enemy: " + enemy.name);
+    }
 
-        public void Input2(GameObject choosenEnemy) // enemy Selection
-        {
-            PlayerChoice.AttackersTarget = choosenEnemy;
-            PlayerInput = PlayerGUI.DONE;
-            // No need to return anything
-        }
+    public void Input2(GameObject choosenEnemy) // Enemy selection
+    {
+        PlayerChoice.AttackersTarget = choosenEnemy;
+        PlayerInput = PlayerGUI.DONE;
+    }
 
-
-    void PlayerInputDone ()
+    void PlayerInputDone()
     {
         PerformList.Add(PlayerChoice);
         EnemySelectPanel.SetActive(false);
@@ -230,5 +250,4 @@ public class BattleStateMachine : MonoBehaviour
         PlayerToManage.RemoveAt(0);
         PlayerInput = PlayerGUI.ACTIVATE;
     }
-
 }
