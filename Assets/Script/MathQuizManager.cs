@@ -1,27 +1,76 @@
+using System;
+using System.Collections;
 using UnityEngine;
-using System.Collections.Generic;
 using UnityEngine.UI;
+using TMPro;
+using YourGameNamespace;
 
 public class MathQuizManager : MonoBehaviour
 {
-    public Text questionText;
-    public InputField answerInput;
+    public TMP_Text questionText;
+    public TMP_InputField answerInput;
+    public TMP_Text feedbackText;
     public Button submitButton;
+    public float timeLimit = 20f;
+
+    private int num1;
+    private int num2;
     private int correctAnswer;
-    private System.Action<bool> onAnswerSubmitted;
+    private float timer;
+    private bool isAnswered;
+    private Action<bool> onAnswer;
+    public event Action<bool> OnQuizCompleted;
+
+    public GameObject QuizPanel;
+    public BattleStateMachine battleStateMachine;
 
     void Start()
     {
-        GenerateQuestion();
+        if (battleStateMachine != null)
+        {
+            battleStateMachine.AttackPanel.SetActive(false);
+        }
+
+        feedbackText.text = "";
+        QuizPanel.SetActive(false);
         submitButton.onClick.AddListener(CheckAnswer);
+    }
+
+    public void StartQuiz(Action<bool> callback)
+    {
+        onAnswer = callback;
+        QuizPanel.SetActive(true);
+
+        if (battleStateMachine != null)
+        {
+            battleStateMachine.AttackPanel.SetActive(false);
+        }
+
+        GenerateQuestion();
+        timer = timeLimit;
+        isAnswered = false;
+
+        StartCoroutine(QuizCoroutine());
+    }
+
+    void Update()
+    {
+        if (!isAnswered)
+        {
+            timer -= Time.deltaTime;
+            if (timer <= 0) // Menggunakan <= untuk menghindari masalah perbandingan float
+            {
+                HandleTimeout();
+            }
+        }
     }
 
     void GenerateQuestion()
     {
-        int number1 = Random.Range(1, 10);
-        int number2 = Random.Range(1, 10);
-        correctAnswer = number1 + number2;
-        questionText.text = number1 + " + " + number2 + " = ?";
+        num1 = UnityEngine.Random.Range(1, 10);
+        num2 = UnityEngine.Random.Range(1, 10);
+        correctAnswer = num1 + num2;
+        questionText.text = $"{num1} + {num2} = ?";
     }
 
     void CheckAnswer()
@@ -30,12 +79,47 @@ public class MathQuizManager : MonoBehaviour
         if (int.TryParse(answerInput.text, out playerAnswer))
         {
             bool isCorrect = playerAnswer == correctAnswer;
-            onAnswerSubmitted?.Invoke(isCorrect);
+            feedbackText.text = isCorrect ? "Correct!" : "Incorrect!";
+            isAnswered = true;
+
+            onAnswer?.Invoke(isCorrect);
+            OnQuizCompleted?.Invoke(isCorrect);
+
+            EndQuiz();
+        }
+        else
+        {
+            feedbackText.text = "Invalid input!";
         }
     }
 
-    public void SetOnAnswerSubmittedCallback(System.Action<bool> callback)
+    void EndQuiz()
     {
-        onAnswerSubmitted = callback;
+        QuizPanel.SetActive(false);
+        if (battleStateMachine != null)
+        {
+            battleStateMachine.AttackPanel.SetActive(true);
+        }
+    }
+
+    void HandleTimeout()
+    {
+        feedbackText.text = "Time's up!";
+        isAnswered = true;
+
+        onAnswer?.Invoke(false);
+        OnQuizCompleted?.Invoke(false);
+
+        EndQuiz();
+    }
+
+    private IEnumerator QuizCoroutine()
+    {
+        yield return new WaitForSeconds(10f);
+
+        if (!isAnswered)
+        {
+            HandleTimeout();
+        }
     }
 }

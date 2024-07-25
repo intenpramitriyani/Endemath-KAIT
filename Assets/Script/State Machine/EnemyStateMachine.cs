@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using YourGameNamespace;
 
 public class EnemyStateMachine : MonoBehaviour
 {
@@ -22,22 +23,65 @@ public class EnemyStateMachine : MonoBehaviour
     private float cur_cooldown = 0f; // Current cooldown time for actions
     private float max_cooldown = 5f; // Maximum cooldown time before taking action
 
-    //timeforaction things
+    // timeforaction things
     private Vector3 startposition;
     private bool actionStarted = false;
     public GameObject PlayerToAttack;
     private float animSpeed = 5f;
 
+    public BattleStateMachine battleStateMachine;
+
     void Start()
     {
-        currentState = TurnState.PROCESSING; // Initialize state to PROCESSING
-        BSM = GameObject.Find("BattleManager").GetComponent<BattleStateMachine>(); // Find and get reference to BattleStateMachine
-        if (BSM == null)
+        // Initialize state to PROCESSING
+        currentState = TurnState.PROCESSING;
+
+        // Find and get reference to BattleStateMachine
+        if (battleStateMachine == null)
         {
-            Debug.LogError("BattleStateMachine not found on 'BattleManager'. Make sure 'BattleManager' has the 'BattleStateMachine' component.");
+            battleStateMachine = GameObject.Find("BattleManager").GetComponent<BattleStateMachine>();
+            if (battleStateMachine == null)
+            {
+                Debug.LogError("BattleStateMachine not found on 'BattleManager'. Make sure 'BattleManager' has the 'BattleStateMachine' component.");
+            }
+
+            if (BSM == null)
+            {
+                Debug.LogError("BattleStateMachine not found on 'BattleManager'. Make sure 'BattleManager' has the 'BattleStateMachine' component.");
+            }
         }
 
-        startposition = transform.position; // Record starting position of the enemy
+        // Record starting position of the enemy
+        startposition = transform.position;
+
+        // Optional: Fetch enemies in battle if needed immediately
+        FetchEnemiesFromBattle();
+    }
+
+    void FetchEnemiesFromBattle()
+    {
+        if (battleStateMachine != null)
+        {
+            List<GameObject> enemies = battleStateMachine.GetEnemyInBattle();
+            // Use `enemies` list as needed
+            Debug.Log("Enemies in battle fetched successfully.");
+        }
+        else
+        {
+            Debug.LogError("BattleStateMachine reference is missing!");
+        }
+    }
+
+    public void ShowEnemies ()
+    {
+        if (BSM != null)
+        {
+            List<GameObject> enemies = BSM.GetEnemyInBattle();
+            foreach (GameObject enemy in enemies)
+            {
+                Debug.Log("Enemy in battle: " + enemy.name);
+            }
+        }
     }
 
     void Update()
@@ -56,7 +100,6 @@ public class EnemyStateMachine : MonoBehaviour
                 break;
             case TurnState.ACTION:
                 // Perform action logic here
-                currentState = TurnState.WAITING; // Transition to waiting state after action
                 StartCoroutine(TimeForAction());
                 break;
             case TurnState.DEAD:
@@ -65,7 +108,7 @@ public class EnemyStateMachine : MonoBehaviour
         }
     }
 
-    void UpgradeProgressBar()
+    private void UpgradeProgressBar()
     {
         cur_cooldown += Time.deltaTime; // Increase cooldown progress over time
 
@@ -75,8 +118,11 @@ public class EnemyStateMachine : MonoBehaviour
         }
     }
 
-    void ChooseAction()
+    private void ChooseAction()
     {
+        Debug.Log("Choosing action for enemy: " + enemy.name);
+        Debug.Log("PlayerInBattle count: " + BSM.PlayerInBattle.Count);
+
         if (BSM.PlayerInBattle.Count > 0) // Check if PlayerInBattle is not empty
         {
             Debug.Log("Choosing action for enemy: " + enemy.name);
@@ -104,34 +150,72 @@ public class EnemyStateMachine : MonoBehaviour
 
         actionStarted = true;
 
-        //animate the enemy near the hero to attack
+        // animate the enemy near the hero to attack
         Vector3 PlayerPosition = new Vector3(PlayerToAttack.transform.position.x + 1.5f, PlayerToAttack.transform.position.y, PlayerToAttack.transform.position.z);
         while (MoveTowardsEnemy(PlayerPosition))
         {
             yield return null;
         }
 
-        //wait a bit
+        // wait a bit
         yield return new WaitForSeconds(0.5f);
 
-        //do damage
+        // do damage
 
-        //animate back to startposition
+        // animate back to startposition
         Vector3 firstPosition = startposition;
         while (MoveTowardsStart(firstPosition))
         {
             yield return null;
         }
 
-        //remove this performer from the list in BSM
+        // remove this performer from the list in BSM
         BSM.PerformList.RemoveAt(0);
-        //reset BSM (wait)
+        // reset BSM (wait)
         BSM.battleStates = BattleStateMachine.PerformAction.WAIT;
-        //end coroutine
+        // end coroutine
         actionStarted = false;
-        //reset this enemy state
+        // reset this enemy state
         cur_cooldown = 0f;
         currentState = TurnState.PROCESSING;
+    }
+
+
+    public void HandleEnemyAction()
+    {
+        Attack();
+        NextTurn();
+    }
+
+    public List<GameObject> EnemyInBattle = new List<GameObject>();
+    public void StartEnemyTurn()
+    {
+        // Logika untuk memulai giliran musuh setelah pemain selesai
+        foreach (var enemy in EnemyInBattle)
+        {
+            EnemyStateMachine enemySM = enemy.GetComponent<EnemyStateMachine>();
+            if (enemySM != null)
+            {
+                enemySM.HandleEnemyAction();
+            }
+            else
+            {
+                Debug.LogError("EnemyStateMachine component is missing on enemy: " + enemy.name);
+            }
+        }
+
+        // Ubah state ke PERFORMACTION atau yang sesuai
+        BSM.battleStates = BattleStateMachine.PerformAction.PERFORMACTION;
+    }
+
+    private void Attack()
+    {
+        Debug.Log("Enemy attacks Player!");
+    }
+
+    private void NextTurn()
+    {
+        Debug.Log("Enemy's turn end. Waiting for Player.");
     }
 
     private bool MoveTowardsEnemy(Vector3 target)

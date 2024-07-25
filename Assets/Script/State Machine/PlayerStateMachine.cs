@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using YourGameNamespace;
 
 public class PlayerStateMachine : MonoBehaviour
 {
@@ -15,7 +16,8 @@ public class PlayerStateMachine : MonoBehaviour
         SELECTING,
         WAITING,
         ACTION,
-        DEAD
+        DEAD,
+        QUIZ
     }
 
     public TurnState currentState; // for the ProgressBar
@@ -31,6 +33,7 @@ public class PlayerStateMachine : MonoBehaviour
 
     private Vector3 startposition;
     private float animSpeed = 5f;
+    public bool hasAnsweredCorrectly = false;
 
     // Start is called before the first frame update
     void Start()
@@ -59,6 +62,10 @@ public class PlayerStateMachine : MonoBehaviour
             case TurnState.WAITING:
                 // Wait for action to be triggered
                 break;
+            case TurnState.QUIZ:
+                BSM.mathQuizManager.StartQuiz(OnQuizCompleted);
+                currentState = TurnState.WAITING;
+                break;
             case TurnState.ACTION:
                 StartCoroutine(TimeForAction());
                 break;
@@ -66,6 +73,19 @@ public class PlayerStateMachine : MonoBehaviour
                 // Handle player's death state
                 break;
         }
+    }
+
+    void OnQuizCompleted(bool isCorrect)
+    {
+        if (isCorrect)
+        {
+            BSM.ShiftEnemyTurn(-1);
+        }
+        else
+        {
+            BSM.ShiftEnemyTurn(1);
+        }
+        currentState = TurnState.ACTION;
     }
 
     void upgradeProgressBar()
@@ -98,7 +118,11 @@ public class PlayerStateMachine : MonoBehaviour
         // Wait a bit before attacking
         yield return new WaitForSeconds(0.5f);
 
+        //
+
         // Perform attack logic here (e.g., dealing damage)
+        currentState = TurnState.WAITING;
+        currentState = TurnState.QUIZ;
 
         // Animate the player back to the start position
         while (MoveTowardsStart(startposition))
@@ -117,12 +141,43 @@ public class PlayerStateMachine : MonoBehaviour
         currentState = TurnState.PROCESSING;
     }
 
-    private bool MoveTowardsEnemy(Vector3 target)
+    public void HandlePlayerAction()
+    {
+
+        if (hasAnsweredCorrectly)
+        {
+            Attack();
+        }
+        else
+        {
+            Debug.Log("IncorrectAnswer, Player can't attack the enemy");
+        }
+        NextTurn();
+    }
+
+private void Attack()
+{
+    Debug.Log("Player attacks Enemy!");
+    // Here you would implement your attack logic, such as dealing damage.
+}
+
+private void NextTurn()
+{
+    Debug.Log("Player turn ends. Waiting for Enemy.");
+    BattleStateMachine battleSM = FindObjectOfType<BattleStateMachine>();
+
+    if (battleSM != null)
+    {
+        battleSM.StartEnemyTurn();
+    }
+}
+
+    bool MoveTowardsEnemy(Vector3 target)
     {
         return target != (transform.position = Vector3.MoveTowards(transform.position, target, animSpeed * Time.deltaTime));
     }
 
-    private bool MoveTowardsStart(Vector3 target)
+    bool MoveTowardsStart(Vector3 target)
     {
         return target != (transform.position = Vector3.MoveTowards(transform.position, target, animSpeed * Time.deltaTime));
     }

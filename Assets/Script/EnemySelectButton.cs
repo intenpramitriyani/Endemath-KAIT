@@ -1,22 +1,46 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using YourGameNamespace;
 
 public class EnemySelectButton : MonoBehaviour
 {
-    public GameObject EnemyPrefab;
-
-    // Method to handle enemy selection
+    public GameObject EnemyPrefab; // Ini adalah prefab musuh yang diwakili oleh tombol ini
+    
+    // Method untuk menangani pemilihan musuh
     public void SelectEnemy()
     {
+        // Temukan BattleStateMachine di dalam BattleManager
         BattleStateMachine BSM = GameObject.Find("BattleManager").GetComponent<BattleStateMachine>();
+
         if (BSM != null)
         {
-            BSM.Input2(EnemyPrefab); //Call input2 on BSM instance
-            BSM.SetSelectedEnemy(EnemyPrefab); // Save the selected enemy prefab
+            // Panggil metode untuk memilih musuh pada BSM dengan prefab musuh
+            BSM.Input2(EnemyPrefab);
+            Debug.Log("Enemy selected: " + EnemyPrefab.name);
         }
         else
         {
-            Debug.LogError("BattleManager not found. Make sure there is a GameObject named 'BattleManager' with the BattleStateMachine component in the scene.");
+            Debug.LogError("BattleManager tidak ditemukan. Pastikan ada GameObject bernama 'BattleManager' dengan komponen BattleStateMachine di dalam scene.");
         }
+
+        MathQuestionPanel.SetActive(true);
     }
+
+    public GameObject MathQuestionPanel;
+
+    public Button attackButton;
+
+    void Start()
+    {
+        attackButton.onClick.AddListener(OnAttackButtonClicked);
+    }
+
+    void OnAttackButtonClicked()
+    {
+        MathQuestionPanel.SetActive(true);
+     
+    }
+    
 }
